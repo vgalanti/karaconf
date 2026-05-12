@@ -1,0 +1,79 @@
+[settings]
+os_layout = "qwerty-us"
+tap_time = 100
+
+[macros]
+arrow = "->"
+fat_arrow = "=>"
+double_colon = "::"
+five_down = { key = "down_arrow", repeat = 5 }
+five_up = { key = "up_arrow", repeat = 5 }
+delete_line = "{home}{shift+down_arrow}{delete_or_backspace}"
+
+[layers.base]
+caps_lock = "delete_or_backspace" # caps to backspace — symmetric to return
+right_command = "sym"             # symbol layer trigger
+right_alt = "nav"                 # navigation layer trigger
+
+
+[layers.nav]
+# vim-style arrows shifted to the home row (jkl; instead of hjkl)
+j = "left_arrow"
+k = "down_arrow"
+l = "up_arrow"
+semicolon = "right_arrow"
+
+# line / multi-line jumps mirrored on the left hand
+a = "home"
+s = "$five_down"
+d = "$five_up"
+f = "end"
+
+caps_lock = "$delete_line"
+
+
+[layers.sym]
+
+### left hand
+
+# brackets, paired by row — optimized for finger rolls
+e = "["
+r = "]"
+d = "("
+f = ")"
+q = "{"
+w = "}"
+a = "<"
+s = ">"
+
+# ternary / negation
+x = "?"
+c = "!"
+
+# arrow macros
+g = "$arrow"        # ->
+h = "$fat_arrow"    # =>
+v = "$double_colon" # ::
+
+
+### right hand
+
+# easiest reach: snake_case underscore
+j = "_"
+
+# best-rolled position: equality
+k = "="
+
+# logical / bitwise grouped together
+l = "|"
+semicolon = "&"
+
+o = "*"
+p = "^"
+y = "%"
+u = "-"
+i = "+"
+
+# preprocessor / division
+n = "#"
+m = "/"

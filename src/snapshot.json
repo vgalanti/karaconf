@@ -1,0 +1,94 @@
+[
+  {
+    "description": "Layer: nav",
+    "manipulators": [
+      {
+        "type": "basic",
+        "from": {
+          "key_code": "h",
+          "modifiers": {
+            "optional": [
+              "any"
+            ]
+          }
+        },
+        "to": [
+          {
+            "key_code": "left_arrow"
+          }
+        ],
+        "conditions": [
+          {
+            "type": "variable_if",
+            "name": "layer_nav",
+            "value": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "description": "Base",
+    "manipulators": [
+      {
+        "type": "basic",
+        "from": {
+          "key_code": "caps_lock",
+          "modifiers": {
+            "optional": [
+              "any"
+            ]
+          }
+        },
+        "to": [
+          {
+            "key_code": "left_control"
+          }
+        ],
+        "to_if_alone": [
+          {
+            "key_code": "escape"
+          }
+        ],
+        "parameters": {
+          "basic.to_if_alone_timeout_milliseconds": 100
+        }
+      },
+      {
+        "type": "basic",
+        "from": {
+          "key_code": "tab",
+          "modifiers": {
+            "optional": [
+              "any"
+            ]
+          }
+        },
+        "to": [
+          {
+            "set_variable": {
+              "name": "layer_nav",
+              "value": 1
+            }
+          }
+        ],
+        "to_if_alone": [
+          {
+            "key_code": "tab"
+          }
+        ],
+        "to_after_key_up": [
+          {
+            "set_variable": {
+              "name": "layer_nav",
+              "value": 0
+            }
+          }
+        ],
+        "parameters": {
+          "basic.to_if_alone_timeout_milliseconds": 100
+        }
+      }
+    ]
+  }
+]
