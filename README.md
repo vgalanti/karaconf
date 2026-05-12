@@ -6,15 +6,15 @@ Simple Karabiner-Elements manager to sync TOML keymap files under `~/.config/kar
 
 ## Installation
 
-_(todo...)_
+_todo..._
 
 ## Usage
 
 ```bash
 karaconf sync             # compile all ~/.config/karaconf/*.toml into karabiner.json
-karaconf switch <name>    # activate a profile (any name from `karaconf list`)
-karaconf reset            # alias for `switch system` — the no-rules profile
-karaconf list             # list every switchable profile (your TOMLs + `system`)
+karaconf list             # list every switchable profile (TOML profiles + `system`)
+karaconf switch <name>    # activate a profile from `karaconf list`
+karaconf reset            # alias for `switch system` - the OS default layout
 ```
 
 ## Example
@@ -41,7 +41,7 @@ k = "up_arrow"
 l = "right_arrow"
 
 [layers.sym]
-n = "$arrow"   # ->
+n = "$arrow"
 a = "="
 ```
 
@@ -62,4 +62,4 @@ karaconf switch keymap
 
 Layer names must not shadow Karabiner key codes. Use names like `nav`, `sym`, `func`.
 
-Key expressions support any number of modifier prefixes joined by `+` (`shift+period`, `shift+command+c`) and US-keyboard symbol shorthand (`#`, `|`, …). To use `+` itself as the key in a combo, double it: `command++` = Cmd+Plus. Macros come in three forms: text (`"->"`), explicit sequence (`["hyphen", "shift+period"]`), or repeat (`{ key = "down_arrow", repeat = 5 }`); see `example/keymap.toml`.
+Key expressions support any number of modifier prefixes joined by `+` (`shift+period`, `shift+command+c`) and US-keyboard symbol shorthand (`#`, `|`, ...). To use `+` itself as the key in a combo, double it: `command++` = Cmd+Plus. Macros come in three forms: text (`"->"`), explicit sequence (`["hyphen", "shift+period"]`), or repeat (`{ key = "down_arrow", repeat = 5 }`); see `example/keymap.toml`.
