@@ -1,4 +1,4 @@
-//! CLI entry point
+//! cli entry point
 
 mod config;
 mod converter;
@@ -24,10 +24,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    Sync,                    // Sync TOML files in ~/.config/karaconf/ to Karabiner profiles
-    Switch { name: String }, // Switch the active Karabiner profile
-    Reset,                   // Switch to the karaconf-managed system/default
-    List,                    // List karaconf profile names
+    Sync,                    // ~/.config/karaconf/*.toml -> karabiner profiles
+    Switch { name: String }, // activate profile
+    Reset,                   // back to managed system/default
+    List,                    // profile names
 }
 
 fn config_root() -> PathBuf {

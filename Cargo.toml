@@ -1,8 +1,13 @@
 [package]
 name = "karaconf"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Manage Karabiner-Elements profiles from TOML"
+repository = "https://github.com/vgalanti/karaconf"
+license = "MIT"
+readme = "README.md"
+keywords = ["karabiner", "keyboard", "macos"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
