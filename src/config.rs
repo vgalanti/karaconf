@@ -3,7 +3,7 @@
 use serde::Deserialize;
 use std::collections::BTreeMap;
 
-/// Keymap loaded from a `<name>.toml` file
+/// one `<name>.toml` profile
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub struct Profile {
@@ -12,13 +12,12 @@ pub struct Profile {
     pub layers: BTreeMap<String, BTreeMap<String, LayerValue>>, // `base` is always active
 }
 
-/// Settings
 #[derive(Debug, Deserialize)]
 #[serde(default)]
 pub struct Settings {
-    pub os_layout: String, // contract for symbol shorthand; validated against `layouts::ALL`
-    pub tap_time: u32,     // tap-hold window in ms
-    pub combo_time: u32,   // combo simultaneous-press window in ms
+    pub os_layout: String, // symbol-shorthand contract; validated against `layouts::ALL`
+    pub tap_time: u32,     // tap-hold window, ms
+    pub combo_time: u32,   // combo simultaneous-press window, ms
 }
 
 impl Default for Settings {
@@ -31,19 +30,18 @@ impl Default for Settings {
     }
 }
 
-/// Macros
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub enum MacroDef {
     Repeat { key: String, repeat: u32 }, // `{ key = "down_arrow", repeat = 5 }`
     Sequence(Vec<String>),               // `["hyphen", "shift+period"]`
-    Text(String),                        // `"->"`, with `{...}` for non-character keys
+    Text(String),                        // `"->"`; `{...}` for non-character keys
 }
 
-/// Value in a layer table
+/// one layer-table value
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub enum LayerValue {
-    TapHold([String; 2]), // `[tap, hold]`; `hold` may name a layer (in base)
-    Simple(String),       // direct key/macro, or layer-name trigger (in base)
+    TapHold([String; 2]), // `[tap, hold]`; in base, `hold` may name a layer
+    Simple(String),       // key/macro, or layer trigger in base
 }

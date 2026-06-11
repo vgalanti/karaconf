@@ -1,4 +1,4 @@
-//! US QWERTY symbol -> key_code map
+//! us qwerty symbol -> key_code
 
 use crate::keys::Layout;
 
