@@ -1,43 +1,33 @@
 # karaconf
 
+## About
+
 Simple Karabiner-Elements manager to sync TOML keymap files under `~/.config/karaconf/<name>.toml`.
 
-## Install
+## Installation
 
-
-```bash
-brew install vgalanti/tap/karaconf
-```
-
-from source, requires Karabiner-Elements to be installed
-
-```bash
-cargo install --git https://github.com/vgalanti/karaconf
-```
+_todo..._
 
 ## Usage
 
 ```bash
 karaconf sync             # compile all ~/.config/karaconf/*.toml into karabiner.json
-karaconf list             # list switchable profiles (TOML profiles + `system`)
+karaconf list             # list every switchable profile (TOML profiles + `system`)
 karaconf switch <name>    # activate a profile from `karaconf list`
-karaconf reset            # alias for `switch system` — OS default layout
+karaconf reset            # alias for `switch system` - the OS default layout
 ```
 
-## Config
+## Example
 
-profiles live at `~/.config/karaconf/<name>.toml`.
+`~/.config/karaconf/keymap.toml`:
 
 ```toml
 [settings]
-os_layout  = "qwerty-us"   # symbol-shorthand contract; only "qwerty-us" supported
-tap_time   = 100           # tap-hold window, ms
-combo_time = 50            # combo simultaneous-press window, ms
+os_layout = "qwerty-us"   # contract for symbol shorthand; only "qwerty-us" is supported today
+tap_time  = 200
 
 [macros]
-arrow     = "->"
-five_down = { key = "down_arrow", repeat = 5 }
-bol       = "{left_command+left_arrow}"
+arrow = "->"
 
 [layers.base]
 caps_lock     = ["escape", "left_control"]   # tap=esc, hold=ctrl
@@ -47,6 +37,8 @@ right_command = "sym"                        # whole-key sym layer trigger
 [layers.nav]
 h = "left_arrow"
 j = "down_arrow"
+k = "up_arrow"
+l = "right_arrow"
 
 [layers.sym]
 n = "$arrow"
@@ -54,30 +46,27 @@ a = "="
 ```
 
 ```bash
-karaconf sync            # write profile into karabiner.json
+karaconf sync          # writes the keymap profile into karabiner.json
 karaconf switch keymap
 ```
-
-`base` is always active. layer names must not shadow Karabiner key codes — use `nav`, `sym`, `func`.
 
 ### Value types
 
 | Form | Meaning | Example |
 |---|---|---|
-| `"key"` | remap | `quote = "delete_or_backspace"` |
-| `"$macro"` | macro reference | `d = "$arrow"` |
-| `"layer_name"` | whole-key layer trigger | `right_command = "sym"` |
-| `["tap", "hold"]` | tap-hold | `caps_lock = ["escape", "left_control"]` |
-| `["tap", "layer_name"]` | tap-hold layer trigger | `tab = ["tab", "nav"]` |
+| `"key"` | Simple remap | `quote = "delete_or_backspace"` |
+| `"$macro"` | Macro reference | `d = "$arrow"` |
+| `"layer_name"` | Whole-key layer trigger | `right_command = "sym"` |
+| `["tap", "hold"]` | Tap-hold | `caps_lock = ["escape", "left_control"]` |
+| `["tap", "layer_name"]` | Tap-hold layer trigger | `tab = ["tab", "nav"]` |
 
-key expressions:
+Layer names must not shadow Karabiner key codes. Use names like `nav`, `sym`, `func`.
 
-- modifiers: join with `+` (`shift+command+c`)
-- symbols: US-keyboard shorthand (`#`, `|`)
+Key expressions support any number of modifier prefixes joined by `+` (`shift+period`, `shift+command+c`) and US-keyboard symbol shorthand (`#`, `|`, ...). To use `+` itself as the key in an expression, double it: `command++` = Cmd+Plus. Macros come in three forms: text (`"->"`), explicit sequence (`["hyphen", "shift+period"]`), or repeat (`{ key = "down_arrow", repeat = 5 }`); see `example/keymap.toml`.
 
 ### Combos
 
-a base-layer key with `+` declares a chord: fires when all parts pressed within `combo_time`.
+A layer-table key with `+` declares a chord: it fires when all parts are pressed within `combo_time` (default 50 ms, settable in `[settings]`).
 
 ```toml
 [layers.base]
@@ -86,13 +75,4 @@ a base-layer key with `+` declares a chord: fires when all parts pressed within 
 "u+i" = "$arrow"   # chord runs a macro
 ```
 
-### Macros
-
-| Form | Example |
-|---|---|
-| text | `arrow = "->"` |
-| non-character keys | `bol = "{left_command+left_arrow}"` |
-| sequence | `delete = ["hyphen", "shift+period"]` |
-| repeat | `five_down = { key = "down_arrow", repeat = 5 }` |
-
-reference with `$name`. see `example/keymap.toml`.
+Combo parts must be plain key codes (no modifiers, no tap-hold) and there must be at least two. Combos and single-key remaps coexist in the same layer; the chord wins inside its window and the single key fires after it.

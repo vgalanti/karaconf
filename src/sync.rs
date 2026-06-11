@@ -1,4 +1,4 @@
-//! cli commands + `karabiner.json` upserts; untouched profiles preserved
+//! CLI commands + `karabiner.json` upserts - untouched profiles preserved
 
 use crate::config::Profile;
 use crate::converter;
@@ -8,26 +8,14 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// reserved system default for resets
+/// Reserved system default for resets
 const SYSTEM_DEFAULT: &str = "system";
 
 const KARABINER_CLI: &str =
     "/Library/Application Support/org.pqrs/Karabiner-Elements/bin/karabiner_cli";
 
-/// fail early if Karabiner-Elements absent, before cryptic downstream errors
-fn ensure_karabiner_installed() -> Result<(), Box<dyn Error>> {
-    if Path::new(KARABINER_CLI).exists() {
-        return Ok(());
-    }
-    Err("Karabiner-Elements not found. Install it from \
-         https://karabiner-elements.pqrs.org \
-         (or `brew install --cask karabiner-elements`)."
-        .into())
-}
-
-/// compile each toml in `karaconf_dir`, upsert as karabiner profile
+/// Compile TOML files in `karaconf_dir` to upsert as a Karabiner profile
 pub fn sync(karaconf_dir: &Path, karabiner_json: &Path) -> Result<(), Box<dyn Error>> {
-    ensure_karabiner_installed()?;
     fs::create_dir_all(karaconf_dir)?;
 
     let mut karabiner = read_json(karabiner_json)?;
@@ -57,9 +45,8 @@ pub fn sync(karaconf_dir: &Path, karabiner_json: &Path) -> Result<(), Box<dyn Er
     Ok(())
 }
 
-/// switch karabiner profiles
+/// Switch Karabiner profiles
 pub fn switch(name: &str) -> Result<(), Box<dyn Error>> {
-    ensure_karabiner_installed()?;
     let status = Command::new(KARABINER_CLI)
         .args(["--select-profile", name])
         .status()?;
@@ -69,12 +56,12 @@ pub fn switch(name: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// reset to os system/default
+/// Reset to OS system/default
 pub fn reset() -> Result<(), Box<dyn Error>> {
     switch(SYSTEM_DEFAULT)
 }
 
-/// print switchable karaconf profile names
+/// Print switchable karaconf profile names
 pub fn list(karaconf_dir: &Path) -> Result<(), Box<dyn Error>> {
     println!("{SYSTEM_DEFAULT}");
     for (name, _) in profile_files(karaconf_dir)? {
@@ -83,7 +70,7 @@ pub fn list(karaconf_dir: &Path) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// sorted `(name, path)` per `*.toml` profile
+/// Sorted `(name, path)` for every `*.toml` profile
 fn profile_files(dir: &Path) -> Result<Vec<(String, PathBuf)>, Box<dyn Error>> {
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,
@@ -124,7 +111,8 @@ fn write_json_atomic(path: &Path, value: &Value) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// replace only `complex_modifications.rules`; push minimal profile if none matches
+/// Replace only `complex_modifications.rules` on the named profile, or push
+/// a fresh minimal profile if none matches. Other fields preserved.
 fn upsert(profiles: &mut Vec<Value>, name: &str, rules: Value) {
     let existing = profiles
         .iter()

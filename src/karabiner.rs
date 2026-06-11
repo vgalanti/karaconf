@@ -1,15 +1,15 @@
-//! karabiner json rule schema
+//! Karabiner JSON rule schema
 
 use serde::Serialize;
 
-/// labeled manipulator group
+/// Group of manipulators with a label
 #[derive(Debug, Serialize)]
 pub struct Rule {
     pub description: String,
     pub manipulators: Vec<Manipulator>,
 }
 
-/// one key mapping; empty/`None` fields skipped in json
+/// One key-mapping rule. Empty / `None` fields skipped in JSON.
 #[derive(Debug, Serialize)]
 pub struct Manipulator {
     pub r#type: String,
@@ -41,9 +41,7 @@ impl Manipulator {
             key_code: None,
             simultaneous: Some(
                 keys.iter()
-                    .map(|k| SimultaneousKey {
-                        key_code: k.clone(),
-                    })
+                    .map(|k| SimultaneousKey { key_code: k.clone() })
                     .collect(),
             ),
             modifiers: FromModifiers {

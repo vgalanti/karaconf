@@ -1,14 +1,14 @@
 use crate::karabiner::{ToEvent, ToKey};
 
-/// symbol-shorthand table for one physical keyboard layout
+/// Symbol-shorthand table for a given physical keyboard layout
 #[derive(Debug)]
 pub struct Layout {
-    pub unshifted: &'static [(&'static str, &'static str)], // no modifier
-    pub shifted: &'static [(&'static str, &'static str)],   // `["shift"]`
+    pub unshifted: &'static [(&'static str, &'static str)], // resolve with no modifier
+    pub shifted: &'static [(&'static str, &'static str)],   // resolve with `["shift"]`
 }
 
 impl Layout {
-    /// look up in `layouts::ALL`; errors list available
+    /// Look up by name in `layouts::ALL`. Errors with the available list.
     pub fn for_keyboard(name: &str) -> Result<&'static Layout, String> {
         crate::layouts::ALL
             .iter()
@@ -24,19 +24,20 @@ impl Layout {
             })
     }
 
-    /// symbol shorthand (`#`, `+`, `|`, …) -> (key_code, modifiers)
+    /// Symbol shorthand (`#`, `+`, `|`, …) -> (key_code, modifiers).
     fn resolve_symbol(&self, expr: &str) -> Option<(String, Vec<String>)> {
         if let Some(&(_, k)) = self.unshifted.iter().find(|(s, _)| *s == expr) {
-            return Some((k.into(), vec![]));
+            Some((k.into(), vec![]))
+        } else {
+            self.shifted
+                .iter()
+                .find(|(s, _)| *s == expr)
+                .map(|&(_, k)| (k.into(), vec!["shift".into()]))
         }
-        self.shifted
-            .iter()
-            .find(|(s, _)| *s == expr)
-            .map(|&(_, k)| (k.into(), vec!["shift".into()]))
     }
 }
 
-/// key-press event from e.g. `"shift+period"`
+/// Key-press event from an expression like `"shift+period"`
 pub fn key_event(layout: &Layout, expr: &str) -> Result<ToEvent, String> {
     let (key_code, modifiers) = parse_key_expr(layout, expr)?;
     Ok(ToEvent::Key(ToKey {
@@ -45,16 +46,19 @@ pub fn key_event(layout: &Layout, expr: &str) -> Result<ToEvent, String> {
     }))
 }
 
-/// plain key code, no modifiers; for contexts that can't carry them (combo part)
+/// Plain key code (no modifiers). For contexts that can't carry modifiers,
+/// like a combo part.
 pub fn key_code_only(layout: &Layout, expr: &str) -> Result<String, String> {
     let (key_code, modifiers) = parse_key_expr(layout, expr)?;
     if !modifiers.is_empty() {
-        return Err(format!("{expr:?} must be a plain key code (no modifiers)"));
+        return Err(format!(
+            "{expr:?} must be a plain key code (no modifiers)"
+        ));
     }
     Ok(key_code)
 }
 
-/// text -> events
+/// Text -> events
 pub fn expand_text(layout: &Layout, text: &str) -> Result<Vec<ToEvent>, String> {
     let mut events = Vec::new();
     let mut chars = text.chars();
@@ -84,7 +88,7 @@ pub fn expand_text(layout: &Layout, text: &str) -> Result<Vec<ToEvent>, String> 
     Ok(events)
 }
 
-/// parse `mod+...+key_or_symbol`
+/// Parse `mod+...+key_or_symbol`
 fn parse_key_expr(layout: &Layout, expr: &str) -> Result<(String, Vec<String>), String> {
     if expr.is_empty() {
         return Err("empty key expression".into());
@@ -93,9 +97,8 @@ fn parse_key_expr(layout: &Layout, expr: &str) -> Result<(String, Vec<String>), 
         return Ok(resolved);
     }
 
-    // trailing `++` = literal `+` key, not an empty part
-    let parts: Vec<&str> = if let Some(rest) = expr.strip_suffix("++") {
-        let mut p: Vec<&str> = rest.split('+').collect();
+    let parts: Vec<&str> = if expr.ends_with("++") {
+        let mut p: Vec<&str> = expr[..expr.len() - 2].split('+').collect();
         p.push("+");
         p
     } else {
@@ -130,7 +133,7 @@ fn parse_key_expr(layout: &Layout, expr: &str) -> Result<(String, Vec<String>), 
     }
 }
 
-/// char -> (key_code, modifiers)
+/// character to (key_code, modifiers)
 fn char_to_key(layout: &Layout, ch: char) -> Result<(String, Vec<String>), String> {
     if let Some(resolved) = layout.resolve_symbol(&ch.to_string()) {
         return Ok(resolved);
@@ -211,7 +214,7 @@ mod tests {
 
     #[test]
     fn parse_key_modifier_plus_symbol() {
-        // option+# = option + (shift+3)
+        // `option+#` = option + (shift+3)
         assert_eq!(
             parse_key_expr(layout(), "option+#").unwrap(),
             ("3".into(), vec!["shift".into(), "option".into()]),
@@ -220,7 +223,7 @@ mod tests {
 
     #[test]
     fn parse_key_trailing_plus_is_literal_plus() {
-        // command++ = Cmd+Plus = Cmd+Shift+= on US QWERTY
+        // `command++` = Cmd+Plus = Cmd+Shift+= on US QWERTY.
         assert_eq!(
             parse_key_expr(layout(), "command++").unwrap(),
             ("equal_sign".into(), vec!["shift".into(), "command".into()]),
@@ -237,11 +240,11 @@ mod tests {
 
     #[test]
     fn parse_key_unknown_shape_errors() {
-        // non-ASCII char: not a symbol, not a keycode shape
+        // Single non-ASCII char is neither a known symbol nor a valid keycode shape
         let err = parse_key_expr(layout(), "§").unwrap_err();
         assert!(err.contains("§"), "got: {err}");
         assert!(parse_key_expr(layout(), "control+§").is_err());
-        // space breaks keycode shape
+        // 'left arrow' (with a space) doesn't match the keycode shape either
         assert!(parse_key_expr(layout(), "left arrow").is_err());
     }
 
@@ -288,7 +291,7 @@ mod tests {
 
     #[test]
     fn expand_text_mixed() {
-        // git + spacebar + commit = 10 events
+        // g, i, t, spacebar, c, o, m, m, i, t = 10
         assert_eq!(
             expand_text(layout(), "git{spacebar}commit").unwrap().len(),
             10

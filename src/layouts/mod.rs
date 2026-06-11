@@ -1,4 +1,4 @@
-//! symbol shorthand tables
+//! Symbol-shorthand tables
 
 mod qwerty_us;
 

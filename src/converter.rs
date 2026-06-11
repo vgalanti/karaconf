@@ -1,14 +1,14 @@
-//! profile -> karabiner rules
+//! Compile a `Profile` into Karabiner rules
 
 use crate::config::{LayerValue, MacroDef, Profile};
 use crate::karabiner::*;
 use crate::keys::{expand_text, key_code_only, key_event, Layout};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-// `base` is always active; other layers gated by their triggers
+/// Always-active layer; others are gated by triggers declared here
 const BASE_LAYER: &str = "base";
 
-/// names that would shadow a karabiner key code
+/// Layer names that would shadow a Karabiner key code
 const RESERVED_LAYER_NAMES: &[&str] = &[
     "shift",
     "left_shift",
@@ -41,7 +41,8 @@ const RESERVED_LAYER_NAMES: &[&str] = &[
     "right_arrow",
 ];
 
-/// validate, expand macros, non-base layers (gated), then base
+/// Compile a profile to rules: validate -> expand macros -> compile non-base
+/// layers (conditioned) -> compile base layer
 pub fn convert(profile: &Profile) -> Result<Vec<Rule>, String> {
     let layout = Layout::for_keyboard(&profile.settings.os_layout)?;
     validate_layer_names(profile)?;
@@ -55,13 +56,13 @@ pub fn convert(profile: &Profile) -> Result<Vec<Rule>, String> {
 
     let mut rules = Vec::new();
 
-    // non-base first: gated rules win first-match
+    // Non-base layers first so their conditioned rules win first-match order
     for (name, keys) in &profile.layers {
         if name == BASE_LAYER {
             continue;
         }
         let mut manipulators = Vec::new();
-        // combos before singles: chord wins inside threshold window
+        // Combos before singles so the chord wins inside its threshold window
         for (k, v) in keys.iter().filter(|(k, _)| is_combo(k)) {
             manipulators.push(combo_manipulator(
                 layout,
@@ -137,7 +138,7 @@ fn validate_layer_names(profile: &Profile) -> Result<(), String> {
     Ok(())
 }
 
-/// non-base key; gated by `variable_if`. tap-hold is base-only
+/// Non-base-layer key. Gated by `variable_if`; tap-hold is base-only.
 fn layer_manipulator(
     layout: &Layout,
     key: &str,
@@ -157,8 +158,8 @@ fn layer_manipulator(
     }
 }
 
-/// base key. `Simple` = remap (layer trigger if it names a layer);
-/// `[tap, hold]` = tap-hold, `hold` may be a key or layer name
+/// Base-layer key. `Simple` = remap (or layer trigger if it names a layer)
+/// `[tap, hold]` = tap-hold; `hold` may be a key or a layer name
 fn base_manipulator(
     layout: &Layout,
     key: &str,
@@ -179,7 +180,7 @@ fn base_manipulator(
             }
         }
         LayerValue::TapHold([tap, hold]) => {
-            // hold-side first, then tap behavior on top
+            // Build `hold`-side manipulator first then layer tap behavior on top
             let base = if layer_names.contains(hold.as_str()) {
                 layer_trigger(key, hold)
             } else {
@@ -200,8 +201,8 @@ fn base_manipulator(
     }
 }
 
-/// combo key. `in_layer = Some(name)` adds layer condition;
-/// layer-trigger values honored in base only (like single keys)
+/// Combo key. `in_layer = Some(name)` adds the layer condition; layer-trigger
+/// values are only honored in base (matches the single-key rules).
 fn combo_manipulator(
     layout: &Layout,
     key: &str,
@@ -242,7 +243,7 @@ fn combo_manipulator(
     Ok(m)
 }
 
-/// split `"j+k"` into key codes; each part must be a plain key
+/// Split `"j+k"` into its key codes. Each part must resolve to a plain key.
 fn parse_combo(layout: &Layout, expr: &str) -> Result<Vec<String>, String> {
     let parts: Vec<&str> = expr.split('+').collect();
     if parts.len() < 2 {
@@ -259,7 +260,7 @@ fn parse_combo(layout: &Layout, expr: &str) -> Result<Vec<String>, String> {
         .collect()
 }
 
-/// set layer_<name> on press, clear on release
+/// flip `layer_<name>` on press / release.
 fn layer_trigger(key: &str, layer: &str) -> Manipulator {
     let var = layer_var(layer);
     Manipulator {
@@ -269,7 +270,7 @@ fn layer_trigger(key: &str, layer: &str) -> Manipulator {
     }
 }
 
-/// `"$name"` -> macro, else single key event
+/// `"$name"` -> macro expansion, else a single key event
 fn resolve_action(
     layout: &Layout,
     action: &str,
@@ -285,11 +286,12 @@ fn resolve_action(
     }
 }
 
-/// karabiner variable name for layer's active flag
+/// Karabiner variable name for a layer's active flag.
 fn layer_var(name: &str) -> String {
     format!("layer_{name}")
 }
 
+/// expand macros
 fn expand_macros(
     layout: &Layout,
     macros: &BTreeMap<String, MacroDef>,
@@ -350,13 +352,13 @@ a = "="
 "#;
         let profile: Profile = toml::from_str(toml).unwrap();
         let json = serde_json::to_value(convert(&profile).unwrap()).unwrap();
-        // rules[1] = Base, manipulators[0] = right_command
+        // rules[1] = "Base", manipulators[0] = right_command
         let m = &json[1]["manipulators"][0];
         assert_eq!(m["from"]["key_code"], "right_command");
         assert_eq!(m["to"][0]["set_variable"]["name"], "layer_sym");
         assert_eq!(m["to"][0]["set_variable"]["value"], 1);
         assert_eq!(m["to_after_key_up"][0]["set_variable"]["value"], 0);
-        // pure layer-trigger: no tap, no timeout
+        // No tap action and no timeout — it's pure layer-trigger.
         assert!(m.get("to_if_alone").is_none());
         assert!(m.get("parameters").is_none());
     }
@@ -454,7 +456,7 @@ h = "left_arrow"
 "#;
         let profile: Profile = toml::from_str(toml).unwrap();
         let json = serde_json::to_value(convert(&profile).unwrap()).unwrap();
-        // rules[1] = Base, manipulators[0] = combo (combos first)
+        // rules[1] = "Base", manipulators[0] = the combo (combos come first)
         let m = &json[1]["manipulators"][0];
         assert_eq!(m["from"]["simultaneous"][0]["key_code"], "d");
         assert_eq!(m["to"][0]["set_variable"]["name"], "layer_nav");
@@ -511,7 +513,7 @@ j = "x"
 
     #[test]
     fn combo_shifted_symbol_part_errors() {
-        // `#` -> shift+3; combo parts can't carry modifiers
+        // `#` resolves to shift+3; combo parts can't carry modifiers
         let err = parse_combo(layout(), "j+#").unwrap_err();
         assert!(err.contains("modifiers"));
     }
