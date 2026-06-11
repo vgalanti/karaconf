@@ -46,6 +46,18 @@ pub fn key_event(layout: &Layout, expr: &str) -> Result<ToEvent, String> {
     }))
 }
 
+/// Plain key code (no modifiers). For contexts that can't carry modifiers,
+/// like a combo part.
+pub fn key_code_only(layout: &Layout, expr: &str) -> Result<String, String> {
+    let (key_code, modifiers) = parse_key_expr(layout, expr)?;
+    if !modifiers.is_empty() {
+        return Err(format!(
+            "{expr:?} must be a plain key code (no modifiers)"
+        ));
+    }
+    Ok(key_code)
+}
+
 /// Text -> events
 pub fn expand_text(layout: &Layout, text: &str) -> Result<Vec<ToEvent>, String> {
     let mut events = Vec::new();

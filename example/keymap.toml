@@ -1,79 +1,117 @@
 [settings]
 os_layout = "qwerty-us"
-tap_time = 100
+tap_time  = 100
 
 [macros]
-arrow = "->"
-fat_arrow = "=>"
-double_colon = "::"
-five_down = { key = "down_arrow", repeat = 5 }
-five_up = { key = "up_arrow", repeat = 5 }
-delete_line = "{home}{shift+down_arrow}{delete_or_backspace}"
+arrow           = "->"
+fat_arrow       = "=>"
+double_colon    = "::"
+five_down       = { key = "down_arrow", repeat = 5 }
+five_up         = { key = "up_arrow", repeat = 5 }
+
+bol             = "{left_command+left_arrow}"
+eol             = "{left_command+right_arrow}"
+app_switch      = "{left_command+tab}"                        # app switch
+mission_ctrl    = "{left_control+up_arrow}"                   # mission control
+spotlight       = "{left_command+spacebar}"
+aero_monitor    = "{left_alt+left_shift+tab}"                 # aerospace monitor switch
+delete_line     = "{home}{shift+down_arrow}{delete_or_backspace}"   # or {command+x} to yank
 
 [layers.base]
-caps_lock = "delete_or_backspace" # caps to backspace — symmetric to return
-right_command = "sym"             # symbol layer trigger
-right_alt = "nav"                 # navigation layer trigger
+caps_lock       = "delete_or_backspace"     # caps lock to delete, symmetric to return 
+right_command   = "sym"                     # symbol layer trigger
+right_alt       = "nav"                     # navigation layer trigger
+left_control    = ["escape", "left_control"]
+left_shift      = ["escape", "left_shift"]
 
 
 [layers.nav]
-# vim-style arrows shifted to the home row (jkl; instead of hjkl)
-j = "left_arrow"
-k = "down_arrow"
-l = "up_arrow"
-semicolon = "right_arrow"
 
-# line / multi-line jumps mirrored on the left hand
-a = "home"
-s = "$five_down"
-d = "$five_up"
-f = "end"
+# lpinky
+caps_lock       = "$delete_line"
+q               = "$aero_monitor"
+a               = "$bol"           
+# lannular
+w               = "$app_switch"
+s               = "left_arrow"
+# lmiddle
+e               = "up_arrow"
+d               = "down_arrow"
+# lindex
+r               = "$mission_ctrl"
+f               = "right_arrow"
 
-caps_lock = "$delete_line"
+t               = "display_brightness_increment"
+g               = "$eol"
+v               = "display_brightness_decrement"
+
+# lthumb
+# left_command    = "$spotlight" # conflict with doing "command+number"
+
+# rindex
+y               = "volume_increment"
+h               = "mute"
+n               = "volume_decrement"
+
+u               = "7"
+j               = "4"
+m               = "1"
+# rmiddle
+i               = "8"
+k               = "5"
+comma           = "2"
+# rannular
+o               = "9"
+l               = "6"
+period          = "3"
+# rpinky
+semicolon       = "0"
+
 
 
 [layers.sym]
 
-### left hand
+### left hand: brackets optimized for finger rolls
 
-# brackets, paired by row — optimized for finger rolls
-e = "["
-r = "]"
-d = "("
-f = ")"
-q = "{"
-w = "}"
-a = "<"
-s = ">"
+# lpinky
+q               = "{"
+a               = "<"
+# lannular
+w               = "}" 
+s               = ">" 
+z               = "!"
+# lmiddle
+e               = "["                       
+d               = "("
+x               = "?"
+# lindex
+r               = "]"
+f               = ")"
+c               = "semicolon"
 
-# ternary / negation
-x = "?"
-c = "!"
+t               = "left_shift+4"           # $
+g               = "$arrow"                 # ->
+v               = "$double_colon"          # ::
 
-# arrow macros
-g = "$arrow"        # ->
-h = "$fat_arrow"    # =>
-v = "$double_colon" # ::
+### right hand: symbols
 
+# lindex
+y               = "%"
+h               = "$fat_arrow"             # =>, right hand technically
+n               = "@"
 
-### right hand
-
-# easiest reach: snake_case underscore
-j = "_"
-
-# best-rolled position: equality
-k = "="
-
-# logical / bitwise grouped together
-l = "|"
-semicolon = "&"
-
-o = "*"
-p = "^"
-y = "%"
-u = "-"
-i = "+"
-
-# preprocessor / division
-n = "#"
-m = "/"
+u               = "+"                       
+j               = "_"
+m               = "#"
+# lmiddle
+i               = "-"                       
+k               = "="
+comma           = "/"  
+# lannular
+o               = "*"
+l               = "|" 
+period          = "backslash"
+# lpinky
+p               = "^"
+semicolon       = "&"   
+slash           = "left_shift"

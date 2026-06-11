@@ -62,4 +62,17 @@ karaconf switch keymap
 
 Layer names must not shadow Karabiner key codes. Use names like `nav`, `sym`, `func`.
 
-Key expressions support any number of modifier prefixes joined by `+` (`shift+period`, `shift+command+c`) and US-keyboard symbol shorthand (`#`, `|`, ...). To use `+` itself as the key in a combo, double it: `command++` = Cmd+Plus. Macros come in three forms: text (`"->"`), explicit sequence (`["hyphen", "shift+period"]`), or repeat (`{ key = "down_arrow", repeat = 5 }`); see `example/keymap.toml`.
+Key expressions support any number of modifier prefixes joined by `+` (`shift+period`, `shift+command+c`) and US-keyboard symbol shorthand (`#`, `|`, ...). To use `+` itself as the key in an expression, double it: `command++` = Cmd+Plus. Macros come in three forms: text (`"->"`), explicit sequence (`["hyphen", "shift+period"]`), or repeat (`{ key = "down_arrow", repeat = 5 }`); see `example/keymap.toml`.
+
+### Combos
+
+A layer-table key with `+` declares a chord: it fires when all parts are pressed within `combo_time` (default 50 ms, settable in `[settings]`).
+
+```toml
+[layers.base]
+"j+k" = "escape"   # chord -> key
+"d+f" = "nav"      # chord triggers a layer (base only)
+"u+i" = "$arrow"   # chord runs a macro
+```
+
+Combo parts must be plain key codes (no modifiers, no tap-hold) and there must be at least two. Combos and single-key remaps coexist in the same layer; the chord wins inside its window and the single key fires after it.

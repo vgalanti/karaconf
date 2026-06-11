@@ -18,6 +18,7 @@ pub struct Profile {
 pub struct Settings {
     pub os_layout: String, // contract for symbol shorthand; validated against `layouts::ALL`
     pub tap_time: u32,     // tap-hold window in ms
+    pub combo_time: u32,   // combo simultaneous-press window in ms
 }
 
 impl Default for Settings {
@@ -25,6 +26,7 @@ impl Default for Settings {
         Self {
             os_layout: "qwerty-us".into(),
             tap_time: 100,
+            combo_time: 50,
         }
     }
 }

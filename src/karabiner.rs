@@ -27,14 +27,33 @@ pub struct Manipulator {
 
 impl Manipulator {
     pub fn from_key(key: &str) -> Self {
+        Self::with_from(FromKey {
+            key_code: Some(key.into()),
+            simultaneous: None,
+            modifiers: FromModifiers {
+                optional: vec!["any".into()],
+            },
+        })
+    }
+
+    pub fn from_combo(keys: &[String]) -> Self {
+        Self::with_from(FromKey {
+            key_code: None,
+            simultaneous: Some(
+                keys.iter()
+                    .map(|k| SimultaneousKey { key_code: k.clone() })
+                    .collect(),
+            ),
+            modifiers: FromModifiers {
+                optional: vec!["any".into()],
+            },
+        })
+    }
+
+    fn with_from(from: FromKey) -> Self {
         Self {
             r#type: "basic".into(),
-            from: FromKey {
-                key_code: key.into(),
-                modifiers: FromModifiers {
-                    optional: vec!["any".into()],
-                },
-            },
+            from,
             to: vec![],
             to_if_alone: vec![],
             to_after_key_up: vec![],
@@ -46,8 +65,16 @@ impl Manipulator {
 
 #[derive(Debug, Serialize)]
 pub struct FromKey {
-    pub key_code: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub simultaneous: Option<Vec<SimultaneousKey>>,
     pub modifiers: FromModifiers,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SimultaneousKey {
+    pub key_code: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -93,8 +120,16 @@ pub struct VariableValue {
 
 #[derive(Debug, Serialize)]
 pub struct Parameters {
-    #[serde(rename = "basic.to_if_alone_timeout_milliseconds")]
-    pub to_if_alone_timeout: u32,
+    #[serde(
+        rename = "basic.to_if_alone_timeout_milliseconds",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub to_if_alone_timeout: Option<u32>,
+    #[serde(
+        rename = "basic.simultaneous_threshold_milliseconds",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub simultaneous_threshold: Option<u32>,
 }
 
 #[derive(Debug, Serialize)]

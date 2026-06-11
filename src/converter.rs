@@ -2,7 +2,7 @@
 
 use crate::config::{LayerValue, MacroDef, Profile};
 use crate::karabiner::*;
-use crate::keys::{expand_text, key_event, Layout};
+use crate::keys::{expand_text, key_code_only, key_event, Layout};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 /// Always-active layer; others are gated by triggers declared here
@@ -61,10 +61,22 @@ pub fn convert(profile: &Profile) -> Result<Vec<Rule>, String> {
         if name == BASE_LAYER {
             continue;
         }
-        let manipulators: Vec<_> = keys
-            .iter()
-            .map(|(k, v)| layer_manipulator(layout, k, v, name, &macros))
-            .collect::<Result<_, _>>()?;
+        let mut manipulators = Vec::new();
+        // Combos before singles so the chord wins inside its threshold window
+        for (k, v) in keys.iter().filter(|(k, _)| is_combo(k)) {
+            manipulators.push(combo_manipulator(
+                layout,
+                k,
+                v,
+                Some(name),
+                &layer_names,
+                &macros,
+                profile.settings.combo_time,
+            )?);
+        }
+        for (k, v) in keys.iter().filter(|(k, _)| !is_combo(k)) {
+            manipulators.push(layer_manipulator(layout, k, v, name, &macros)?);
+        }
         if !manipulators.is_empty() {
             rules.push(Rule {
                 description: format!("Layer: {name}"),
@@ -74,19 +86,28 @@ pub fn convert(profile: &Profile) -> Result<Vec<Rule>, String> {
     }
 
     if let Some(base) = profile.layers.get(BASE_LAYER) {
-        let manipulators: Vec<_> = base
-            .iter()
-            .map(|(k, v)| {
-                base_manipulator(
-                    layout,
-                    k,
-                    v,
-                    &layer_names,
-                    &macros,
-                    profile.settings.tap_time,
-                )
-            })
-            .collect::<Result<_, _>>()?;
+        let mut manipulators = Vec::new();
+        for (k, v) in base.iter().filter(|(k, _)| is_combo(k)) {
+            manipulators.push(combo_manipulator(
+                layout,
+                k,
+                v,
+                None,
+                &layer_names,
+                &macros,
+                profile.settings.combo_time,
+            )?);
+        }
+        for (k, v) in base.iter().filter(|(k, _)| !is_combo(k)) {
+            manipulators.push(base_manipulator(
+                layout,
+                k,
+                v,
+                &layer_names,
+                &macros,
+                profile.settings.tap_time,
+            )?);
+        }
         if !manipulators.is_empty() {
             rules.push(Rule {
                 description: "Base".into(),
@@ -96,6 +117,10 @@ pub fn convert(profile: &Profile) -> Result<Vec<Rule>, String> {
     }
 
     Ok(rules)
+}
+
+fn is_combo(key: &str) -> bool {
+    key.contains('+')
 }
 
 fn validate_layer_names(profile: &Profile) -> Result<(), String> {
@@ -167,12 +192,72 @@ fn base_manipulator(
             Ok(Manipulator {
                 to_if_alone: vec![key_event(layout, tap)?],
                 parameters: Some(Parameters {
-                    to_if_alone_timeout: tap_time,
+                    to_if_alone_timeout: Some(tap_time),
+                    simultaneous_threshold: None,
                 }),
                 ..base
             })
         }
     }
+}
+
+/// Combo key. `in_layer = Some(name)` adds the layer condition; layer-trigger
+/// values are only honored in base (matches the single-key rules).
+fn combo_manipulator(
+    layout: &Layout,
+    key: &str,
+    value: &LayerValue,
+    in_layer: Option<&str>,
+    layer_names: &HashSet<&str>,
+    macros: &HashMap<String, Vec<ToEvent>>,
+    combo_time: u32,
+) -> Result<Manipulator, String> {
+    let parts = parse_combo(layout, key)?;
+    let action = match value {
+        LayerValue::Simple(a) => a,
+        LayerValue::TapHold(_) => {
+            return Err(format!("tap-hold is not supported for combo '{key}'"))
+        }
+    };
+    let base = Manipulator::from_combo(&parts);
+    let mut m = if in_layer.is_none() && layer_names.contains(action.as_str()) {
+        let var = layer_var(action);
+        Manipulator {
+            to: vec![ToEvent::set_var(&var, 1)],
+            to_after_key_up: vec![ToEvent::set_var(var, 0)],
+            ..base
+        }
+    } else {
+        Manipulator {
+            to: resolve_action(layout, action, macros)?,
+            ..base
+        }
+    };
+    m.parameters = Some(Parameters {
+        to_if_alone_timeout: None,
+        simultaneous_threshold: Some(combo_time),
+    });
+    if let Some(layer) = in_layer {
+        m.conditions = vec![Condition::variable_if(layer_var(layer), 1)];
+    }
+    Ok(m)
+}
+
+/// Split `"j+k"` into its key codes. Each part must resolve to a plain key.
+fn parse_combo(layout: &Layout, expr: &str) -> Result<Vec<String>, String> {
+    let parts: Vec<&str> = expr.split('+').collect();
+    if parts.len() < 2 {
+        return Err(format!("combo '{expr}' needs at least two keys"));
+    }
+    parts
+        .iter()
+        .map(|p| {
+            if p.is_empty() {
+                return Err(format!("empty part in combo '{expr}'"));
+            }
+            key_code_only(layout, p)
+        })
+        .collect()
 }
 
 /// flip `layer_<name>` on press / release.
@@ -333,6 +418,104 @@ os_layout = "azerty-fr"
         assert!(err.contains("azerty-fr"), "missing user input: {err}");
         assert!(err.contains("qwerty-us"), "missing supported list: {err}");
         assert!(err.contains("shift+4"), "missing workaround example: {err}");
+    }
+
+    #[test]
+    fn combo_emits_simultaneous_and_threshold() {
+        let toml = r#"
+[settings]
+combo_time = 40
+
+[layers.base]
+"j+k" = "escape"
+"#;
+        let profile: Profile = toml::from_str(toml).unwrap();
+        let json = serde_json::to_value(convert(&profile).unwrap()).unwrap();
+        let m = &json[0]["manipulators"][0];
+        assert_eq!(m["from"]["simultaneous"][0]["key_code"], "j");
+        assert_eq!(m["from"]["simultaneous"][1]["key_code"], "k");
+        assert!(m["from"].get("key_code").is_none());
+        assert_eq!(m["to"][0]["key_code"], "escape");
+        assert_eq!(
+            m["parameters"]["basic.simultaneous_threshold_milliseconds"],
+            40
+        );
+        assert!(m["parameters"]
+            .get("basic.to_if_alone_timeout_milliseconds")
+            .is_none());
+    }
+
+    #[test]
+    fn combo_can_trigger_layer_in_base() {
+        let toml = r#"
+[layers.base]
+"d+f" = "nav"
+
+[layers.nav]
+h = "left_arrow"
+"#;
+        let profile: Profile = toml::from_str(toml).unwrap();
+        let json = serde_json::to_value(convert(&profile).unwrap()).unwrap();
+        // rules[1] = "Base", manipulators[0] = the combo (combos come first)
+        let m = &json[1]["manipulators"][0];
+        assert_eq!(m["from"]["simultaneous"][0]["key_code"], "d");
+        assert_eq!(m["to"][0]["set_variable"]["name"], "layer_nav");
+        assert_eq!(m["to"][0]["set_variable"]["value"], 1);
+        assert_eq!(m["to_after_key_up"][0]["set_variable"]["value"], 0);
+    }
+
+    #[test]
+    fn combo_in_non_base_layer_is_gated() {
+        let toml = r#"
+[layers.base]
+tab = ["tab", "nav"]
+
+[layers.nav]
+"j+k" = "escape"
+"#;
+        let profile: Profile = toml::from_str(toml).unwrap();
+        let json = serde_json::to_value(convert(&profile).unwrap()).unwrap();
+        let m = &json[0]["manipulators"][0];
+        assert_eq!(m["from"]["simultaneous"][0]["key_code"], "j");
+        assert_eq!(m["conditions"][0]["name"], "layer_nav");
+    }
+
+    #[test]
+    fn combo_ordered_before_singles_in_same_rule() {
+        let toml = r#"
+[layers.base]
+j = "x"
+"j+k" = "escape"
+"#;
+        let profile: Profile = toml::from_str(toml).unwrap();
+        let json = serde_json::to_value(convert(&profile).unwrap()).unwrap();
+        let ms = &json[0]["manipulators"];
+        assert!(ms[0]["from"]["simultaneous"].is_array());
+        assert_eq!(ms[1]["from"]["key_code"], "j");
+    }
+
+    #[test]
+    fn combo_tap_hold_errors() {
+        let toml = r#"
+[layers.base]
+"j+k" = ["escape", "left_control"]
+"#;
+        let profile: Profile = toml::from_str(toml).unwrap();
+        let err = convert(&profile).unwrap_err();
+        assert!(err.contains("tap-hold"));
+    }
+
+    #[test]
+    fn combo_single_part_errors() {
+        let err = parse_combo(layout(), "j").unwrap_err();
+        assert!(err.contains("at least two"));
+    }
+
+    #[test]
+    fn combo_shifted_symbol_part_errors() {
+        // `#` resolves to shift+3; combo parts can't carry modifiers
+        let err = parse_combo(layout(), "j+#").unwrap_err();
+        assert!(err.contains("modifiers"));
     }
 
     #[test]
